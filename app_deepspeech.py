@@ -122,9 +122,10 @@ trained on American English is being served.
     lm_beta = 1.1834137581510284
     beam = 100
 
-    sound_only_page = "Sound only (sendonly)"
-    with_video_page = "With video (sendrecv)"
-    app_mode = st.selectbox("Choose the app mode", [sound_only_page, with_video_page])
+    # sound_only_page = "Sound only (sendonly)"
+    # with_video_page = "With video (sendrecv)"
+    # app_mode = st.selectbox("Choose the app mode", [sound_only_page, with_video_page])
+    app_mode = sound_only_page
 
     if app_mode == sound_only_page:
         app_sst(
@@ -200,97 +201,97 @@ def app_sst(model_path: str, lm_path: str, lm_alpha: float, lm_beta: float, beam
             break
 
 
-def app_sst_with_video(
-    model_path: str, lm_path: str, lm_alpha: float, lm_beta: float, beam: int
-):
-    frames_deque_lock = threading.Lock()
-    frames_deque: deque = deque([])
+# def app_sst_with_video(
+#     model_path: str, lm_path: str, lm_alpha: float, lm_beta: float, beam: int
+# ):
+#     frames_deque_lock = threading.Lock()
+#     frames_deque: deque = deque([])
 
-    async def queued_audio_frames_callback(
-        frames: List[av.AudioFrame],
-    ) -> av.AudioFrame:
-        with frames_deque_lock:
-            frames_deque.extend(frames)
+#     async def queued_audio_frames_callback(
+#         frames: List[av.AudioFrame],
+#     ) -> av.AudioFrame:
+#         with frames_deque_lock:
+#             frames_deque.extend(frames)
 
-        # Return empty frames to be silent.
-        new_frames = []
-        for frame in frames:
-            input_array = frame.to_ndarray()
-            new_frame = av.AudioFrame.from_ndarray(
-                np.zeros(input_array.shape, dtype=input_array.dtype),
-                layout=frame.layout.name,
-            )
-            new_frame.sample_rate = frame.sample_rate
-            new_frames.append(new_frame)
+#         # Return empty frames to be silent.
+#         new_frames = []
+#         for frame in frames:
+#             input_array = frame.to_ndarray()
+#             new_frame = av.AudioFrame.from_ndarray(
+#                 np.zeros(input_array.shape, dtype=input_array.dtype),
+#                 layout=frame.layout.name,
+#             )
+#             new_frame.sample_rate = frame.sample_rate
+#             new_frames.append(new_frame)
 
-        return new_frames
+#         return new_frames
 
-    webrtc_ctx = webrtc_streamer(
-        key="speech-to-text-w-video",
-        mode=WebRtcMode.SENDRECV,
-        queued_audio_frames_callback=queued_audio_frames_callback,
-        rtc_configuration={"iceServers": get_ice_servers()},
-        media_stream_constraints={"video": True, "audio": True},
-    )
+#     webrtc_ctx = webrtc_streamer(
+#         key="speech-to-text-w-video",
+#         mode=WebRtcMode.SENDRECV,
+#         queued_audio_frames_callback=queued_audio_frames_callback,
+#         rtc_configuration={"iceServers": get_ice_servers()},
+#         media_stream_constraints={"video": True, "audio": True},
+#     )
 
-    status_indicator = st.empty()
+#     status_indicator = st.empty()
 
-    if not webrtc_ctx.state.playing:
-        return
+#     if not webrtc_ctx.state.playing:
+#         return
 
-    status_indicator.write("Loading...")
-    text_output = st.empty()
-    stream = None
+#     status_indicator.write("Loading...")
+#     text_output = st.empty()
+#     stream = None
 
-    while True:
-        if webrtc_ctx.state.playing:
-            if stream is None:
-                from deepspeech import Model
+#     while True:
+#         if webrtc_ctx.state.playing:
+#             if stream is None:
+#                 from deepspeech import Model
 
-                model = Model(model_path)
-                model.enableExternalScorer(lm_path)
-                model.setScorerAlphaBeta(lm_alpha, lm_beta)
-                model.setBeamWidth(beam)
+#                 model = Model(model_path)
+#                 model.enableExternalScorer(lm_path)
+#                 model.setScorerAlphaBeta(lm_alpha, lm_beta)
+#                 model.setBeamWidth(beam)
 
-                stream = model.createStream()
+#                 stream = model.createStream()
 
-                status_indicator.write("Model loaded.")
+#                 status_indicator.write("Model loaded.")
 
-            sound_chunk = pydub.AudioSegment.empty()
+#             sound_chunk = pydub.AudioSegment.empty()
 
-            audio_frames = []
-            with frames_deque_lock:
-                while len(frames_deque) > 0:
-                    frame = frames_deque.popleft()
-                    audio_frames.append(frame)
+#             audio_frames = []
+#             with frames_deque_lock:
+#                 while len(frames_deque) > 0:
+#                     frame = frames_deque.popleft()
+#                     audio_frames.append(frame)
 
-            if len(audio_frames) == 0:
-                time.sleep(0.1)
-                status_indicator.write("No frame arrived.")
-                continue
+#             if len(audio_frames) == 0:
+#                 time.sleep(0.1)
+#                 status_indicator.write("No frame arrived.")
+#                 continue
 
-            status_indicator.write("Running. Say something!")
+#             status_indicator.write("Running. Say something!")
 
-            for audio_frame in audio_frames:
-                sound = pydub.AudioSegment(
-                    data=audio_frame.to_ndarray().tobytes(),
-                    sample_width=audio_frame.format.bytes,
-                    frame_rate=audio_frame.sample_rate,
-                    channels=len(audio_frame.layout.channels),
-                )
-                sound_chunk += sound
+#             for audio_frame in audio_frames:
+#                 sound = pydub.AudioSegment(
+#                     data=audio_frame.to_ndarray().tobytes(),
+#                     sample_width=audio_frame.format.bytes,
+#                     frame_rate=audio_frame.sample_rate,
+#                     channels=len(audio_frame.layout.channels),
+#                 )
+#                 sound_chunk += sound
 
-            if len(sound_chunk) > 0:
-                sound_chunk = sound_chunk.set_channels(1).set_frame_rate(
-                    model.sampleRate()
-                )
-                buffer = np.array(sound_chunk.get_array_of_samples())
-                stream.feedAudioContent(buffer)
-                text = stream.intermediateDecode()
-                text_output.markdown(f"**Text:** {text}")
-        else:
-            status_indicator.write("Stopped.")
-            break
+#             if len(sound_chunk) > 0:
+#                 sound_chunk = sound_chunk.set_channels(1).set_frame_rate(
+#                     model.sampleRate()
+#                 )
+#                 buffer = np.array(sound_chunk.get_array_of_samples())
+#                 stream.feedAudioContent(buffer)
+#                 text = stream.intermediateDecode()
+#                 text_output.markdown(f"**Text:** {text}")
+#         else:
+#             status_indicator.write("Stopped.")
+#             break
 
 
 if __name__ == "__main__":
