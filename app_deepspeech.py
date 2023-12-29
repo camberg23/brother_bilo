@@ -127,12 +127,36 @@ trained on American English is being served.
         app_sst(
             str(MODEL_LOCAL_PATH), str(LANG_MODEL_LOCAL_PATH), lm_alpha, lm_beta, beam
         )
-    # elif app_mode == with_video_page:
-    #     app_sst_with_video(
-    #         str(MODEL_LOCAL_PATH), str(LANG_MODEL_LOCAL_PATH), lm_alpha, lm_beta, beam
-    #     )
 
-def app_sst(model_path: str, lm_path: str, lm_alpha: float, lm_beta: float, beam: int):
+
+from deepgram import Deepgram
+import numpy as np
+import pydub
+import asyncio
+
+# Initialize Deepgram SDK
+DEEPGRAM_API_KEY = 'YOUR_DEEPGRAM_API_KEY'
+deepgram = Deepgram(DEEPGRAM_API_KEY)
+
+async def transcribe_stream(audio_stream, text_output):
+    # Create a websocket connection to Deepgram
+    deepgram_live = await deepgram.transcription.live({'punctuate': True, 'language': 'en-US'})
+
+    # Process and send audio stream to Deepgram
+    for audio_frame in audio_stream:
+        sound = pydub.AudioSegment(
+            data=audio_frame.to_ndarray().tobytes(),
+            sample_width=audio_frame.format.bytes,
+            frame_rate=audio_frame.sample_rate,
+            channels=len(audio_frame.layout.channels),
+        )
+        buffer = np.array(sound.get_array_of_samples())
+        deepgram_live.send(buffer)
+
+    # Close the connection
+    await deepgram_live.finish()
+
+def app_sst():
     webrtc_ctx = webrtc_streamer(
         key="speech-to-text",
         mode=WebRtcMode.SENDONLY,
@@ -141,59 +165,75 @@ def app_sst(model_path: str, lm_path: str, lm_alpha: float, lm_beta: float, beam
         media_stream_constraints={"video": False, "audio": True},
     )
 
-    status_indicator = st.empty()
-
-    if not webrtc_ctx.state.playing:
-        return
-
-    status_indicator.write("Loading...")
     text_output = st.empty()
-    stream = None
 
-    while True:
-        if webrtc_ctx.audio_receiver:
-            if stream is None:
-                from deepspeech import Model
+    if webrtc_ctx.audio_receiver:
+        audio_frames = webrtc_ctx.audio_receiver.get_frames(timeout=1)
+        asyncio.run(transcribe_stream(audio_frames, text_output))
 
-                model = Model(model_path)
-                model.enableExternalScorer(lm_path)
-                model.setScorerAlphaBeta(lm_alpha, lm_beta)
-                model.setBeamWidth(beam)
 
-                stream = model.createStream()
+# def app_sst(model_path: str, lm_path: str, lm_alpha: float, lm_beta: float, beam: int):
+#     webrtc_ctx = webrtc_streamer(
+#         key="speech-to-text",
+#         mode=WebRtcMode.SENDONLY,
+#         audio_receiver_size=1024,
+#         rtc_configuration={"iceServers": get_ice_servers()},
+#         media_stream_constraints={"video": False, "audio": True},
+#     )
 
-                status_indicator.write("Model loaded.")
+#     status_indicator = st.empty()
 
-            sound_chunk = pydub.AudioSegment.empty()
-            try:
-                audio_frames = webrtc_ctx.audio_receiver.get_frames(timeout=1)
-            except queue.Empty:
-                time.sleep(0.1)
-                status_indicator.write("No frame arrived.")
-                continue
+#     if not webrtc_ctx.state.playing:
+#         return
 
-            status_indicator.write("Running. Say something!")
+#     status_indicator.write("Loading...")
+#     text_output = st.empty()
+#     stream = None
 
-            for audio_frame in audio_frames:
-                sound = pydub.AudioSegment(
-                    data=audio_frame.to_ndarray().tobytes(),
-                    sample_width=audio_frame.format.bytes,
-                    frame_rate=audio_frame.sample_rate,
-                    channels=len(audio_frame.layout.channels),
-                )
-                sound_chunk += sound
+#     while True:
+#         if webrtc_ctx.audio_receiver:
+#             if stream is None:
+#                 from deepspeech import Model
 
-            if len(sound_chunk) > 0:
-                sound_chunk = sound_chunk.set_channels(1).set_frame_rate(
-                    model.sampleRate()
-                )
-                buffer = np.array(sound_chunk.get_array_of_samples())
-                stream.feedAudioContent(buffer)
-                text = stream.intermediateDecode()
-                text_output.markdown(f"**Text:** {text}")
-        else:
-            status_indicator.write("AudioReciver is not set. Abort.")
-            break
+#                 model = Model(model_path)
+#                 model.enableExternalScorer(lm_path)
+#                 model.setScorerAlphaBeta(lm_alpha, lm_beta)
+#                 model.setBeamWidth(beam)
+
+#                 stream = model.createStream()
+
+#                 status_indicator.write("Model loaded.")
+
+#             sound_chunk = pydub.AudioSegment.empty()
+#             try:
+#                 audio_frames = webrtc_ctx.audio_receiver.get_frames(timeout=1)
+#             except queue.Empty:
+#                 time.sleep(0.1)
+#                 status_indicator.write("No frame arrived.")
+#                 continue
+
+#             status_indicator.write("Running. Say something!")
+
+#             for audio_frame in audio_frames:
+#                 sound = pydub.AudioSegment(
+#                     data=audio_frame.to_ndarray().tobytes(),
+#                     sample_width=audio_frame.format.bytes,
+#                     frame_rate=audio_frame.sample_rate,
+#                     channels=len(audio_frame.layout.channels),
+#                 )
+#                 sound_chunk += sound
+
+#             if len(sound_chunk) > 0:
+#                 sound_chunk = sound_chunk.set_channels(1).set_frame_rate(
+#                     model.sampleRate()
+#                 )
+#                 buffer = np.array(sound_chunk.get_array_of_samples())
+#                 stream.feedAudioContent(buffer)
+#                 text = stream.intermediateDecode()
+#                 text_output.markdown(f"**Text:** {text}")
+#         else:
+#             status_indicator.write("AudioReciver is not set. Abort.")
+#             break
 
 if __name__ == "__main__":
     import os
