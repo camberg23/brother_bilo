@@ -122,10 +122,10 @@ trained on American English is being served.
     lm_beta = 1.1834137581510284
     beam = 100
 
-    # sound_only_page = "Sound only (sendonly)"
-    # with_video_page = "With video (sendrecv)"
-    # app_mode = st.selectbox("Choose the app mode", [sound_only_page, with_video_page])
-    app_mode = sound_only_page
+    sound_only_page = "Sound only (sendonly)"
+    with_video_page = "With video (sendrecv)"
+    app_mode = st.selectbox("Choose the app mode", [sound_only_page, with_video_page])
+    # app_mode = sound_only_page
 
     if app_mode == sound_only_page:
         app_sst(
