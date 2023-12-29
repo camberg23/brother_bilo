@@ -18,9 +18,7 @@ from twilio.rest import Client
 from streamlit_webrtc import WebRtcMode, webrtc_streamer
 
 HERE = Path(__file__).parent
-
 logger = logging.getLogger(__name__)
-
 
 # This code is based on https://github.com/streamlit/demo-self-driving/blob/230245391f2dda0cb464008195a470751c01770b/streamlit_app.py#L48  # noqa: E501
 def download_file(url, download_to: Path, expected_size=None):
@@ -93,8 +91,6 @@ def get_ice_servers():
     token = client.tokens.create()
 
     return token.ice_servers
-
-
 
 def main():
     st.header("Real Time Speech-to-Text")
