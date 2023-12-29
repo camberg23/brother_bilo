@@ -135,7 +135,7 @@ import pydub
 import asyncio
 
 # Initialize Deepgram SDK
-DEEPGRAM_API_KEY = 'YOUR_DEEPGRAM_API_KEY'
+DEEPGRAM_API_KEY = st.secrets['DEEPGRAM']
 deepgram = Deepgram(DEEPGRAM_API_KEY)
 
 async def transcribe_stream(audio_stream, text_output):
