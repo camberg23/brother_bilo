@@ -138,20 +138,34 @@ import asyncio
 DEEPGRAM_API_KEY = st.secrets['DEEPGRAM']
 deepgram = Deepgram(DEEPGRAM_API_KEY)
 
+# async def transcribe_stream(audio_stream, text_output):
+#     # Create a websocket connection to Deepgram
+#     deepgram_live = await deepgram.transcription.live({'punctuate': True, 'language': 'en-US'})
+
+#     # Process and send audio stream to Deepgram
+#     for audio_frame in audio_stream:
+#         sound = pydub.AudioSegment(
+#             data=audio_frame.to_ndarray().tobytes(),
+#             sample_width=audio_frame.format.bytes,
+#             frame_rate=audio_frame.sample_rate,
+#             channels=len(audio_frame.layout.channels),
+#         )
+#         buffer = np.array(sound.get_array_of_samples())
+#         deepgram_live.send(buffer)
+
+#     # Close the connection
+#     await deepgram_live.finish()
+
 async def transcribe_stream(audio_stream, text_output):
     # Create a websocket connection to Deepgram
     deepgram_live = await deepgram.transcription.live({'punctuate': True, 'language': 'en-US'})
 
     # Process and send audio stream to Deepgram
     for audio_frame in audio_stream:
-        sound = pydub.AudioSegment(
-            data=audio_frame.to_ndarray().tobytes(),
-            sample_width=audio_frame.format.bytes,
-            frame_rate=audio_frame.sample_rate,
-            channels=len(audio_frame.layout.channels),
-        )
-        buffer = np.array(sound.get_array_of_samples())
-        deepgram_live.send(buffer)
+        # Convert the audio frame to bytes
+        frame_bytes = audio_frame.to_ndarray().tobytes()
+        # Send the bytes data to Deepgram
+        await deepgram_live.send(frame_bytes)
 
     # Close the connection
     await deepgram_live.finish()
