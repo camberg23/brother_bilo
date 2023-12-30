@@ -137,8 +137,6 @@ import asyncio
 # Initialize Deepgram SDK
 DEEPGRAM_API_KEY = st.secrets['DEEPGRAM']
 deepgram = Deepgram(DEEPGRAM_API_KEY)
-print(deepgram)
-st.write(deepgram)
 
 # async def transcribe_stream(audio_stream, text_output):
 #     # Create a websocket connection to Deepgram
@@ -161,13 +159,12 @@ st.write(deepgram)
 async def transcribe_stream(audio_stream, text_output):
     try:
         deepgram_live = await deepgram.transcription.live({'punctuate': True, 'language': 'en-US'})
+        st.write(deepgram_live)
         if not deepgram_live:
             print("Failed to establish WebSocket connection.")
             return
-        else:
-            print('YES!')
     except Exception as e:
-        print(f"Error establishing WebSocket connection: {e}")
+        st.write(f"Error establishing WebSocket connection: {e}")
         return
 
     # Ensure deepgram_live is not None before proceeding
