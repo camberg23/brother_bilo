@@ -159,28 +159,25 @@ deepgram = Deepgram(DEEPGRAM_API_KEY)
 async def transcribe_stream(audio_stream, text_output):
     try:
         deepgram_live = await deepgram.transcription.live({'punctuate': True, 'language': 'en-US'})
-        st.write(deepgram_live)
+        st.write("WebSocket Connection Status:", deepgram_live)
         if not deepgram_live:
             print("Failed to establish WebSocket connection.")
             return
     except Exception as e:
-        st.write(f"Error establishing WebSocket connection: {e}")
+        print(f"Error establishing WebSocket connection: {e}")
         return
-
-    # Ensure deepgram_live is not None before proceeding
-    if deepgram_live is None:
-        print("deepgram_live is None, unable to send data.")
-        return
-    else:
-        print('YES!')
 
     for audio_frame in audio_stream:
         frame_bytes = audio_frame.to_ndarray().tobytes()
-        # Ensure frame_bytes is not None before sending
-        if frame_bytes:
-            await deepgram_live.send(frame_bytes)
-        else:
-            print("frame_bytes is None, skipping.")
+        st.write(f"Frame size: {len(frame_bytes)}, type: {type(frame_bytes)}")
+
+        try:
+            if frame_bytes:
+                await deepgram_live.send(frame_bytes)
+            else:
+                st.write("frame_bytes is None or empty, skipping.")
+        except Exception as e:
+            st.write(f"Error sending data: {e}")
 
     await deepgram_live.finish()
 
