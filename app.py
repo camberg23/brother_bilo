@@ -157,17 +157,20 @@ deepgram = Deepgram(DEEPGRAM_API_KEY)
 #     await deepgram_live.finish()
 
 async def transcribe_stream(audio_stream, text_output):
-    # Create a websocket connection to Deepgram
-    deepgram_live = await deepgram.transcription.live({'punctuate': True, 'language': 'en-US'})
+    try:
+        deepgram_live = await deepgram.transcription.live({'punctuate': True, 'language': 'en-US'})
+        if not deepgram_live:
+            print("Failed to establish WebSocket connection.")
+            return
+    except Exception as e:
+        print(f"Error establishing WebSocket connection: {e}")
+        return
 
-    # Process and send audio stream to Deepgram
     for audio_frame in audio_stream:
-        # Convert the audio frame to bytes
         frame_bytes = audio_frame.to_ndarray().tobytes()
-        # Send the bytes data to Deepgram
+        print("Sending data to Deepgram:", frame_bytes[:30])  # Print first few bytes for inspection
         await deepgram_live.send(frame_bytes)
 
-    # Close the connection
     await deepgram_live.finish()
 
 def app_sst():
