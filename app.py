@@ -220,7 +220,7 @@ def app_sst():
         while True:
             try:
                 # Fetch audio frames with a timeout
-                audio_frames = webrtc_ctx.audio_receiver.get_frames(timeout=1)
+                audio_frames = webrtc_ctx.audio_receiver.get_frames(timeout=5)
                 
                 # Run the transcription asynchronously
                 asyncio.run(transcribe_stream(audio_frames, text_output))
