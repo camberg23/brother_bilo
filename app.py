@@ -124,9 +124,9 @@ trained on American English is being served.
     app_mode = sound_only_page
 
     if app_mode == sound_only_page:
-        app_sst(
-            str(MODEL_LOCAL_PATH), str(LANG_MODEL_LOCAL_PATH), lm_alpha, lm_beta, beam
-        )
+        app_sst()
+            # str(MODEL_LOCAL_PATH), str(LANG_MODEL_LOCAL_PATH), lm_alpha, lm_beta, beam
+        # )
 
 
 from deepgram import Deepgram
