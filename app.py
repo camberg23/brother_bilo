@@ -137,6 +137,8 @@ import asyncio
 # Initialize Deepgram SDK
 DEEPGRAM_API_KEY = st.secrets['DEEPGRAM']
 deepgram = Deepgram(DEEPGRAM_API_KEY)
+print(deepgram)
+st.write(deepgram)
 
 # async def transcribe_stream(audio_stream, text_output):
 #     # Create a websocket connection to Deepgram
