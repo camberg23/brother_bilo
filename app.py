@@ -216,20 +216,14 @@ def app_sst():
     text_output = st.empty()
 
     if webrtc_ctx.audio_receiver:
-        # Start a loop to continuously process audio frames
         while True:
             try:
-                # Fetch audio frames with a timeout
-                audio_frames = webrtc_ctx.audio_receiver.get_frames(timeout=5)
-                
-                # Run the transcription asynchronously
-                asyncio.run(transcribe_stream(audio_frames, text_output))
-
+                audio_frames = webrtc_ctx.audio_receiver.get_frames(timeout=1)
+                if audio_frames:
+                    asyncio.run(transcribe_stream(audio_frames, text_output))
             except queue.Empty:
-                # Handle the case where no frames are received
-                print("Waiting for audio frames...")
+                st.write("Waiting for audio frames...")
                 time.sleep(0.1)
-                continue
 
 # def app_sst():
 #     webrtc_ctx = webrtc_streamer(
