@@ -156,28 +156,51 @@ deepgram = Deepgram(DEEPGRAM_API_KEY)
 #     # Close the connection
 #     await deepgram_live.finish()
 
+# async def transcribe_stream(audio_stream, text_output):
+#     try:
+#         deepgram_live = await deepgram.transcription.live({'punctuate': True, 'language': 'en-US'})
+#         st.write("WebSocket Connection Status:", deepgram_live)
+#         if not deepgram_live:
+#             print("Failed to establish WebSocket connection.")
+#             return
+#     except Exception as e:
+#         print(f"Error establishing WebSocket connection: {e}")
+#         return
+
+#     for audio_frame in audio_stream:
+#         frame_bytes = audio_frame.to_ndarray().tobytes()
+#         st.write(f"Frame size: {len(frame_bytes)}, type: {type(frame_bytes)}")
+
+#         try:
+#             if frame_bytes:
+#                 await deepgram_live.send(frame_bytes)
+#             else:
+#                 st.write("frame_bytes is None or empty, skipping.")
+#         except Exception as e:
+#             st.write(f"Error sending data: {e}")
+
+#     await deepgram_live.finish()
+
 async def transcribe_stream(audio_stream, text_output):
     try:
-        deepgram_live = await deepgram.transcription.live({'punctuate': True, 'language': 'en-US'})
-        st.write("WebSocket Connection Status:", deepgram_live)
-        if not deepgram_live:
-            print("Failed to establish WebSocket connection.")
-            return
+        deepgram_live = await deepgram.transcription.live({
+            'smart_format': True,
+            'interim_results': False,
+            'language': 'en-US',
+            'model': 'nova-2',
+        })
+        deepgram_live.register_handler(deepgram_live.event.CLOSE, lambda c: print(f'Connection closed with code {c}.'))
+        deepgram_live.register_handler(deepgram_live.event.TRANSCRIPT_RECEIVED, print)
     except Exception as e:
-        print(f"Error establishing WebSocket connection: {e}")
+        print(f'Could not open socket: {e}')
         return
 
     for audio_frame in audio_stream:
         frame_bytes = audio_frame.to_ndarray().tobytes()
-        st.write(f"Frame size: {len(frame_bytes)}, type: {type(frame_bytes)}")
-
-        try:
-            if frame_bytes:
-                await deepgram_live.send(frame_bytes)
-            else:
-                st.write("frame_bytes is None or empty, skipping.")
-        except Exception as e:
-            st.write(f"Error sending data: {e}")
+        if frame_bytes:
+            deepgram_live.send(frame_bytes)
+        else:
+            print("No data to send.")
 
     await deepgram_live.finish()
 
