@@ -182,25 +182,20 @@ deepgram = Deepgram(DEEPGRAM_API_KEY)
 #     await deepgram_live.finish()
 
 async def transcribe_stream(audio_stream, text_output):
-    try:
-        deepgram_live = await deepgram.transcription.live({
-            'smart_format': True,
-            'interim_results': False,
-            'language': 'en-US',
-            'model': 'nova-2',
-        })
-        deepgram_live.register_handler(deepgram_live.event.CLOSE, lambda c: print(f'Connection closed with code {c}.'))
-        deepgram_live.register_handler(deepgram_live.event.TRANSCRIPT_RECEIVED, print)
-    except Exception as e:
-        print(f'Could not open socket: {e}')
-        return
+    deepgram_live = await deepgram.transcription.live({
+        'smart_format': True,
+        'interim_results': False,
+        'language': 'en-US',
+        'model': 'nova-2',
+    })
+
+    deepgram_live.register_handler(deepgram_live.event.TRANSCRIPT_RECEIVED, lambda result: text_output.write(result['channel']['alternatives'][0]['transcript']))
+    deepgram_live.register_handler(deepgram_live.event.CLOSE, lambda _: text_output.write('Connection closed.'))
+    deepgram_live.register_handler(deepgram_live.event.ERROR, lambda error: text_output.write(f'Error: {error}'))
 
     for audio_frame in audio_stream:
         frame_bytes = audio_frame.to_ndarray().tobytes()
-        if frame_bytes:
-            deepgram_live.send(frame_bytes)
-        else:
-            print("No data to send.")
+        await deepgram_live.send(frame_bytes)
 
     await deepgram_live.finish()
 
